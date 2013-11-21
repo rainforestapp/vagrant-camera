@@ -18,7 +18,7 @@ module Vagrant
             end
           end
 
-          o.on("-s PATH", "--save", "Save images to a specific directory.") do |c|
+          o.on("-s PATH", "--save", "Save images to a specific path.") do |c|
             @options[:save_location] = c
           end
         end
@@ -35,11 +35,16 @@ module Vagrant
         !%x{which open}.chomp.to_s.empty?
       end
 
+      def supported_vm?(vm)
+        vm.provider.to_s.include?("VirtualBox") ||
+          vm.provider.to_s.include?("KVM")
+      end
+
       def capture_screens
         with_target_vms(@argv[0]) do |vm|
 
-          unless vm.provider.to_s.include?("VirtualBox")
-            @env.ui.send :error, "Cannot capture screenshot, we can only capture screenshots on virtualbox instances."
+          unless supported_vm?(vm)
+            @env.ui.send :error, "Cannot capture screenshot for provider #{vm.provider.to_s}."
             return
           end
 
@@ -48,14 +53,21 @@ module Vagrant
           else
             @env.ui.send :info, "Capturing screenshot of #{vm.name}"
 
-            filename = File.join(Dir.tmpdir, "screenshot_#{vm.name}_#{Time.now.to_i}.png")
+            filename = @options[:save_location]
 
-            vm.provider.driver.execute_command [
-              "controlvm",
-              vm.provider.driver.uuid,
-              "screenshotpng",
-              filename
-            ]
+
+            if vm.provider.to_s.include?("VirtualBox")
+              vm.provider.driver.execute_command [
+                "controlvm",
+                vm.provider.driver.uuid,
+                "screenshotpng",
+                filename
+              ]
+            else
+              unless system("virsh screenshot #{vm.id} #{filename}")
+                @env.ui.send :error, "Cannot capture screenshot using virsh"
+              end
+            end
 
             @env.ui.send :success, "Screenshot saved at #{filename}"
             @screenshots << filename
@@ -64,11 +76,8 @@ module Vagrant
 
             unless @options[:save_location].nil?
               @screenshots.each do |file|
-                new_file = File.join(@options[:save_location], File.basename(file))
-
                 begin
-                  FileUtils.copy(file, new_file)
-                  @env.ui.send :success, "#{file} -> #{new_file}"
+                  @env.ui.send :success, "#{file}"
                 rescue => e
                   @env.ui.send(:error, e.message)
                 end

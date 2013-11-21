@@ -1,6 +1,6 @@
 # Vagrant::Camera
 
-Takes screenshots of your Vagrant VMs.
+Takes screenshots of your Vagrant VMs. Supports both VirtualBox and KVM/QEmu.
 
 Inspired by [latortuga/vagrant-screenshot](https://github.com/latortuga/vagrant-screenshot)
 
@@ -26,7 +26,7 @@ Or install as a global vagrant plugin
 
     Usage: vagrant camera [vm-name] [options] [-h]
     -o, --open                       Open generated image after capture
-    -s, --save PATH                  Save images to a specific directory.
+    -s, --save PATH                  Save images to a specific path.
     -h, --help                       Print this help
 
 ## Contributing
